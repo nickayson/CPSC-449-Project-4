@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS game;
 DROP TABLE IF EXISTS answers;
 DROP TABLE IF EXISTS guess;
 DROP TABLE IF EXISTS validGuess;
+DROP TABLE IF EXISTS webhook;
 
 CREATE TABLE users (
     --user_id INTEGER primary key,
@@ -41,6 +42,12 @@ CREATE TABLE validGuess (
     validGuess_id INTEGER primary key,
     word VARCHAR,
     UNIQUE(word)
+);
+
+CREATE TABLE "webhook" (
+	"webhook_id" VARCHAR(36) NOT NULL,
+	"url" TEXT NOT NULL,
+	PRIMARY KEY ("webhook_id")
 );
 
 INSERT INTO answers(word) VALUES('cigar');

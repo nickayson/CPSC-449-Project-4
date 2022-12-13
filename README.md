@@ -42,6 +42,10 @@ Section-01
 	Leaderboard results:              http POST http://127.0.0.1:5400/results/ game_id=[game_id] username=[username] win=[1 or 0] num_guesses=[numofguesses]
 
 	Leaderboard top-scores:           http GET http://127.0.0.1:5400/top-scores/
+	
+	Add webhook:                      http --auth user:temp POST tuffix-vm/add_webhook url=<url>
+	
+	List all webhooks:                http --auth user:temp GET tuffix-vm/getWebhooks
 
 In top-scores we have dummy data with scores of 0 and will get removed as you add more users with higher scores
 
