@@ -7,6 +7,7 @@ import random
 import databases
 import toml
 import uuid
+import quart as q
 
 from quart import Quart, g, request, abort
 from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request
@@ -22,47 +23,51 @@ app.config.from_file(f"./etc/{__name__}.toml", toml.load)
 
 @dataclasses.dataclass
 class Guess:
-    guess: str
-    game_id: str
+	guess: str
+	game_id: str
+    
+@dataclasses.dataclass
+class Webhook:
+	url: str
 
 
 async def _connect_primary_db():
-    database = databases.Database(app.config["DATABASES"]["PRIMARY"])
-    await database.connect()
-    return database
+	database = databases.Database(app.config["DATABASES"]["PRIMARY"])
+	await database.connect()
+	return database
 
 def _get_primary_db():
-    if not hasattr(g, "sqlite_primary_db"):
-        g.sqlite_primary_db = _connect_primary_db()
-    return g.sqlite_primary_db
+    	if not hasattr(g, "sqlite_primary_db"):
+    		g.sqlite_primary_db = _connect_primary_db()
+    	return g.sqlite_primary_db
 
 async def _connect_db(db_val):
-    if db_val:
-        data = []
-        data.append(databases.Database(app.config["DATABASES"]["PRIMARY"]))
-        data.append(databases.Database(app.config["DATABASES"]["SECONDARY"]))
-        data.append(databases.Database(app.config["DATABASES"]["THIRD"]))
-        database = random.choice(data)
-        await database.connect()
-        return database
+	if db_val:
+		data = []
+		data.append(databases.Database(app.config["DATABASES"]["PRIMARY"]))
+		data.append(databases.Database(app.config["DATABASES"]["SECONDARY"]))
+		data.append(databases.Database(app.config["DATABASES"]["THIRD"]))
+		database = random.choice(data)
+		await database.connect()
+		return database
 
 def _get_db(db_val):
-    if not hasattr(g, "sqlite_db"):
-        g.sqlite_db = _connect_db(db_val)
-    return g.sqlite_db
+	if not hasattr(g, "sqlite_db"):
+		g.sqlite_db = _connect_db(db_val)
+	return g.sqlite_db
 
 
 @app.teardown_appcontext
 async def close_connection(exception):
-    db = getattr(g, "_sqlite_db", None)
-    if db is not None:
-        await db.disconnect()
+	db = getattr(g, "_sqlite_db", None)
+	if db is not None:
+		await db.disconnect()
 
 @app.teardown_appcontext
 async def close_connection(exception):
-    db = getattr(g, "_sqlite_primary_db", None)
-    if db is not None:
-        await db.disconnect()
+	db = getattr(g, "_sqlite_primary_db", None)
+	if db is not None:
+		await db.disconnect()
 
 @app.route("/game/", methods=["GET"])
 async def game():
@@ -333,3 +338,43 @@ async def get_status(game_id):
         return {"guessesLeft": numOfGuesses}
 
     abort(410)
+    
+    
+@app.route("/game/add_webhook", methods=["POST"])
+@validate_request(Webhook)
+async def add_webhook(data):
+	db_write = await _get_primary_db()
+	db_read = await  _get_db('sec')
+	webhook_data = dataclasses.asdict(data)
+
+	username = request.authorization["username"]
+	wid = str(uuid.uuid4())
+	webhook = {'webhook_id': wid, 'url': webhook_data["url"]}
+	try:
+		id = await db_write.execute(
+		"""
+                INSERT INTO webhook(webhook_id, url)
+                VALUES(:webhook_id, :url);
+                """,
+                webhook,
+		)
+		return {
+		"msg": "Webhook URL is submitted.",
+		}, 200
+	except sqlite3.IntegrityError as e:
+		abort(409, e)
+	
+@app.route("/game/getWebhooks", methods=["GET"])
+async def get_webhooks():
+	db_write = await _get_primary_db()
+	db_read = await  _get_db('sec')
+
+	username = request.authorization["username"]
+
+	# gets all webhooks
+	webhooks = await db_read.fetch_all("SELECT webhook_id, url FROM webhook",)
+	listOfWebhooks = []
+	if webhooks:
+        	for x in webhooks:
+            		listOfWebhooks.append({"url:": x[1]})
+	return listOfWebhooks
