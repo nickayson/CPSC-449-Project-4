@@ -100,11 +100,11 @@ async def score(data: LeaderboardInfo):
 
 			return leaderboard_info
 		else:
-    			return {
+			return {
     					"msg" : "No score added"
     				}
 	except:
-    		return {
+			return {
 				"error": "Game score is submitted.",
 				"fix": "Create a new game."
     			}
