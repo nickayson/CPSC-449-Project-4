@@ -73,7 +73,7 @@ def deliver_msg(webhooks, data):
 	payload = {"text": str(data)}
 	headers = {'Content-type': 'text/html'}
 	for x in webhooks:
-		response=httpx.post(x[1], json=data,)	
+		response=httpx.post(x[1], json=data)	
 
 @app.route("/game/", methods=["GET"])
 async def game():
