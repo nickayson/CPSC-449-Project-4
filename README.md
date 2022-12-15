@@ -5,9 +5,7 @@ We have also created one micoservice to maintain the leaderboard for the wordle 
 
 ## Developed by:      
 Nicholas Ayson   
-Hardik Vagrecha   
-Michael Collins   
-Maria Ortega   
+Shivangi Shakya   
 
 
 7 PM: Tuesday Class
