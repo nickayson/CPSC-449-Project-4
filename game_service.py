@@ -6,7 +6,7 @@ import random
 
 import databases
 import toml
-import uuid
+import uuid, httpx
 import quart as q
 
 from quart import Quart, g, request, abort
@@ -68,6 +68,12 @@ async def close_connection(exception):
 	db = getattr(g, "_sqlite_primary_db", None)
 	if db is not None:
 		await db.disconnect()
+		
+def deliver_msg(webhooks, data):
+	payload = {"text": str(data)}
+	headers = {'Content-type': 'text/html'}
+	for x in webhooks:
+		response=httpx.post(x[1], json=data,)	
 
 @app.route("/game/", methods=["GET"])
 async def game():
@@ -252,6 +258,10 @@ async def make_guess(data):
             else:
                 remaining = game[2] - 1,
                 correct = True
+                current_game = 6 - int(remaining[0])
+                data = {"game_id": game_id, "username": username, "win": 1, "num_guesses": str(current_game)}
+                webhooks = await db_read.fetch_all("SELECT * FROM webhook",)
+                deliver_msg(webhooks, data)
             return {
                 "Guess_valid": True,
                 "Guess_correct": correct ,
@@ -286,6 +296,9 @@ async def make_guess(data):
             "Guess_results": {"guess": guessWord, "results": locations},
             }
         else:
+            data = {"game_id": game_id, "username": username, "win": 0, "num_guesses": 6}
+            webhooks = await db_read.fetch_all("SELECT * FROM webhook",)
+            deliver_msg(webhooks, data)
             return {"guessesLeft": 0}
 
     else:
@@ -345,36 +358,52 @@ async def get_status(game_id):
 async def add_webhook(data):
 	db_write = await _get_primary_db()
 	db_read = await  _get_db('sec')
+	
 	webhook_data = dataclasses.asdict(data)
 
-	username = request.authorization["username"]
+	#username = request.authorization["username"]
 	wid = str(uuid.uuid4())
 	webhook = {'webhook_id': wid, 'url': webhook_data["url"]}
-	try:
-		id = await db_write.execute(
-		"""
-                INSERT INTO webhook(webhook_id, url)
-                VALUES(:webhook_id, :url);
-                """,
-                webhook,
-		)
+	
+	web_in_db = await db_read.fetch_one("SELECT * FROM webhook WHERE url = :url",
+	 values={"url": webhook_data["url"]})
+	if (web_in_db):
 		return {
-		"msg": "Webhook URL is submitted.",
-		}, 200
-	except sqlite3.IntegrityError as e:
-		abort(409, e)
+				"msg" : "Webhook URL Already Exists"
+			}
+	else:
+		try:
+			id = await db_write.execute(
+			"""
+		        INSERT INTO webhook(webhook_id, url)
+		        VALUES(:webhook_id, :url);
+		        """,
+		        webhook,
+			)
+			return {
+			"msg": "Webhook URL is submitted.",
+			}, 200
+		except sqlite3.IntegrityError as e:
+			abort(409, e)
 	
 @app.route("/game/getWebhooks", methods=["GET"])
 async def get_webhooks():
 	db_write = await _get_primary_db()
 	db_read = await  _get_db('sec')
 
-	username = request.authorization["username"]
+	#username = request.authorization["username"]
 
 	# gets all webhooks
 	webhooks = await db_read.fetch_all("SELECT webhook_id, url FROM webhook",)
 	listOfWebhooks = []
+	i = 0
 	if webhooks:
         	for x in webhooks:
-            		listOfWebhooks.append({"url:": x[1]})
+        		i = i + 1
+        		listOfWebhooks.append({"URL "+str(i) : x[1]})
 	return listOfWebhooks
+	
+	
+	
+	
+	

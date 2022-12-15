@@ -7,7 +7,9 @@ import random
 import databases
 import toml
 import uuid
-import redis
+import redis, ast
+import os, socket, httpx, json, requests
+from game_service import Webhook
 
 from quart import Quart, g, request, abort
 from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request
@@ -16,7 +18,7 @@ app = Quart(__name__)
 QuartSchema(app)
         
 # Initialize redis client
-redisClient = redis.StrictRedis(host='localhost', port=6379, db=0, charset='utf-8', decode_responses=True)
+redisClient = redis.Redis("localhost", 6379)
 
 @dataclasses.dataclass
 class LeaderboardInfo:
@@ -28,7 +30,14 @@ class LeaderboardInfo:
 # connect to reddis db at port 6379
 def get_redis_db():
     r = redis.Redis(host='localhost', port=6379, db=0)
+    #r.flushdb()
     return r
+
+def hostname():
+	port = os.environ["PORT"]
+	domain = socket.getfqdn("127.0.0.1")
+	host = "http://"+domain+":"+port+"/results/"
+	return host
 
 # Keep track of the score based on if user won the game
 def get_score(guesses, win):
@@ -49,82 +58,73 @@ def get_score(guesses, win):
     else:
         return 0
 
+@app.route("/add-leaderboard/", methods=["POST"])
+async def add_leaderboard():
+	response = httpx.post("http://tuffix-vm/add_webhook", json={"url":str(hostname())})
+	return response.text
+
 # Results completely seperated from other services
 @app.route("/results/", methods=["POST"])
 @validate_request(LeaderboardInfo)
 async def score(data: LeaderboardInfo):
-    redisdb = get_redis_db()
-    game_data = dataclasses.asdict(data)
+	redisdb = get_redis_db()
+	game_data = dataclasses.asdict(data)
     
-    game_id = game_data["game_id"]
-    username = game_data["username"]
-    win = game_data["win"]
-    num_guesses = game_data["num_guesses"]
+	game_id = game_data["game_id"]
+	username = game_data["username"]
+	win = game_data["win"]
+	num_guesses = int(game_data["num_guesses"])
+	try:
+		score = get_score(num_guesses, win)
+		games = 1
+		if redisdb.exists(username):
+			score_data = ast.literal_eval((redisdb.get(username)).decode("UTF-8"))
+			games = int(score_data["games"])
+			score = (score + (int(score_data["score"])*games)) / (games + 1)
+		res = {
+			username: str({
+				"score": score,
+				"games": games + 1
+			})
+		}
+		data_added = redisdb.mset(res)
+			
+		if data_added:
+			leaderboard_info = {
+			"game_id": game_id, 
+			"username": username, 
+			"win": win, 
+			"num_of_guesses": num_guesses,
+			"score": score
+			}
 
-    # Set data for a game
-    redisdb.hset(game_id, "win", int(win))
-    redisdb.hset(game_id, "username", username)
-    redisdb.hset(game_id, "num_guesses", num_guesses)
-
-    # Keeps track of the score
-    redisdb.hincrby(username, "games")
-    current_score = redisdb.hget(username, "score")
-    game_score = get_score(num_guesses, win)
-
-    # games for the user
-    games = redisdb.hget(username, "games")
-    
-    if current_score is not None :
-        current_score = current_score.decode("utf-8")
-    else:
-        current_score = 0
-    if games is not None:
-        games = games.decode("utf-8")
-    else:
-        games = 1
-    
-    avg = (int(current_score) + int(game_score)) // int(games)
-    redisdb.hset(username, "score", avg)
-    
-    redisdb.zadd("players", {username: avg})
-    
-    
-    # return format
-    leaderboard_info = {
-        "game_id": game_id, 
-        "username": username, 
-        "win": win, 
-        "num_of_guesses": num_guesses,
-        "score": game_score
-    }
-
-    return leaderboard_info
+			return leaderboard_info
+		else:
+    			return {
+    					"msg" : "No score added"
+    				}
+	except:
+    		return {
+				"error": "Game score is submitted.",
+				"fix": "Create a new game."
+    			}
+			
     
 # TOP 10 Scores
 @app.route("/top-scores/", methods=["GET"])
 async def topScores():
-    
-    redisdb = get_redis_db()
-    
-    #dummy data
-    j=1
-    while j<=9:
-        test = "dummy" + str(j)
-        # all tests have score 0
-        redisdb.zadd("players",{test: 0})
-        j+=1
-        
+	player_list = {}
+	redisdb = get_redis_db()
+	for key in redisdb.keys():
+		player_list[key.decode("UTF-8")] = ast.literal_eval((redisdb.get(key)).decode("UTF-8"))["score"]
+	sorted_player_list = dict(sorted(player_list.items(), key=lambda item: item[1], reverse=True))
 
-    arr = redisdb.zrevrange("players", 0, -1, withscores=True)
-    top_players = {}
-    i = 0
-        
-    while i < len(arr) and i < 10:
-        player = arr[i]
-        top_players[i+1] = player[0].decode("utf-8")
-        i += 1
-
-    return top_players
+	res = {}
+	for k, val in enumerate(sorted_player_list):
+		res[int(k)+1] = val+" => "+str(sorted_player_list[val])
+	while len(res) > 10:
+		res.popitem()
+	return res, 200
 
 # Handle bad routes/errors 
 @app.errorhandler(404)
