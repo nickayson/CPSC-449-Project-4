@@ -24,12 +24,17 @@ Section-01
 4) run "foreman start"
 5) Inside the directory run "sh ./bin/init.sh" to initiate db
 6) The servers should be running after this
-7) Open a new terminal and begin making API calls below
+7) For testing the webhook:  
+   1. Start the webhook service https://github.com/ProfAvery/cpsc449/tree/master/quart/webhooks by changing the PORT to 6000 in a separate terminal.
+   2. In a different terminal, run: ngrok http 6000
+8) Open a new terminal and begin making API calls below
 
 
 ## API calls using http:
 
 	Sign-Up:                          http POST tuffix-vm/signup username=[example] password=[example]
+	
+	Subscribe Webhook:		   http POST http://127.0.0.1:5400/add-leaderboard/
 
 	Make new game:                    http --auth username:password POST tuffix-vm/makeGame
 
@@ -43,9 +48,9 @@ Section-01
 
 	Leaderboard top-scores:           http GET http://127.0.0.1:5400/top-scores/
 	
-	Add webhook:                      http --auth user:temp POST tuffix-vm/add_webhook url=<url>
+	Add webhook:                      http POST tuffix-vm/add_webhook url=<url>
 	
-	List all webhooks:                http --auth user:temp GET tuffix-vm/getWebhooks
+	List all webhooks:                http GET tuffix-vm/getWebhooks
 
 In top-scores we have dummy data with scores of 0 and will get removed as you add more users with higher scores
 
