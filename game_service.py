@@ -12,10 +12,20 @@ import quart as q
 from quart import Quart, g, request, abort
 from quart_schema import QuartSchema, RequestSchemaValidationError, validate_request
 
+from redis import Redis
+from rq import Queue, Worker
+
+
 app = Quart(__name__)
 QuartSchema(app)
 
 app.config.from_file(f"./etc/{__name__}.toml", toml.load)
+
+# connect to reddis db at port 6379
+def get_redis_db():
+    r = Redis(host='localhost', port=6379, db=0)
+    #r.flushdb()
+    return r
 
 #@dataclasses.dataclass
 #class Game:
@@ -70,10 +80,13 @@ async def close_connection(exception):
 		await db.disconnect()
 		
 def deliver_msg(webhooks, data):
-	payload = {"text": str(data)}
-	headers = {'Content-type': 'text/html'}
-	for x in webhooks:
-		response=httpx.post(x[1], json=data,)	
+    redis = get_redis_db()
+    q = Queue(connection=redis)  # no args implies the default queue
+    data = q.enqueue(make_guess, 'http://tuffix-vm/add_webhook')
+    payload = {"text": str(data)}
+    headers = {'Content-type': 'text/html'}
+    for x in webhooks:
+        response=httpx.post(x[1], json=data,)	
 
 @app.route("/game/", methods=["GET"])
 async def game():
@@ -230,6 +243,7 @@ async def make_guess(data):
             abort(409, e)
 
         payload = {"guessAmount": game[2] - 1,"game_id": game_id}
+        guessamount = game[2] - 1
         try:
             id = await db_write.execute(
                 """
@@ -351,8 +365,7 @@ async def get_status(game_id):
         return {"guessesLeft": numOfGuesses}
 
     abort(410)
-    
-    
+
 @app.route("/game/add_webhook", methods=["POST"])
 @validate_request(Webhook)
 async def add_webhook(data):

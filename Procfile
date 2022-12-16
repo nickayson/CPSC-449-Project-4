@@ -6,6 +6,7 @@ third: ./bin/litefs -config ./etc/third.yml
 
 leaderboard_service: hypercorn leaderboard_service --reload --debug --bind leaderboard_service.local.gd:$PORT --access-logfile - --error-logfile - --log-level DEBUG
 
+rq worker high default low
 # game_service1: hypercorn game_service --reload --debug --bind game_service.local.gd:$PORT --access-logfile - --error-logfile - --log-level DEBUG
 # game_service2: hypercorn game_service --reload --debug --bind game_service.local.gd:$PORT --access-logfile - --error-logfile - --log-level DEBUG
 # game_service3: hypercorn game_service --reload --debug --bind game_service.local.gd:$PORT --access-logfile - --error-logfile - --log-level DEBUG
