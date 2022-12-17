@@ -37,9 +37,9 @@ async def _connect_primary_db():
 	return database
 
 def _get_primary_db():
-    	if not hasattr(g, "sqlite_primary_db"):
-    		g.sqlite_primary_db = _connect_primary_db()
-    	return g.sqlite_primary_db
+    if not hasattr(g, "sqlite_primary_db"):
+        g.sqlite_primary_db = _connect_primary_db()
+    return g.sqlite_primary_db
 
 async def _connect_db(db_val):
 	if db_val:
@@ -388,20 +388,20 @@ async def add_webhook(data):
 	
 @app.route("/game/getWebhooks", methods=["GET"])
 async def get_webhooks():
-	db_write = await _get_primary_db()
-	db_read = await  _get_db('sec')
+    db_write = await _get_primary_db()
+    db_read = await  _get_db('sec')
 
 	#username = request.authorization["username"]
 
 	# gets all webhooks
-	webhooks = await db_read.fetch_all("SELECT webhook_id, url FROM webhook",)
-	listOfWebhooks = []
-	i = 0
-	if webhooks:
-        	for x in webhooks:
-        		i = i + 1
-        		listOfWebhooks.append({"URL "+str(i) : x[1]})
-	return listOfWebhooks
+    webhooks = await db_read.fetch_all("SELECT webhook_id, url FROM webhook",)
+    listOfWebhooks = []
+    i = 0
+    if webhooks:
+        for x in webhooks:
+            i = i + 1
+            listOfWebhooks.append({"URL "+str(i) : x[1]})
+            return listOfWebhooks
 	
 	
 	

@@ -30,7 +30,7 @@ class LeaderboardInfo:
 # connect to reddis db at port 6379
 def get_redis_db():
     r = redis.Redis(host='localhost', port=6379, db=0)
-    #r.flushdb()
+    r.flushdb()
     return r
 
 def hostname():
@@ -100,7 +100,7 @@ async def score(data: LeaderboardInfo):
 
 			return leaderboard_info
 		else:
-    			return {
+			return {
     					"msg" : "No score added"
     				}
 	except:
