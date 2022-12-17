@@ -6,13 +6,14 @@ We have also created one micoservice to maintain the leaderboard for the wordle 
 ## Developed by:      
 Nicholas Ayson   
 Shivangi Shakya   
+Ming Chen
 
 
 7 PM: Tuesday Class
 Section-01         
 
 
-# Welcome to Project 3
+# Welcome to Project 4
 
 ## Set-Up Instructions:
 
