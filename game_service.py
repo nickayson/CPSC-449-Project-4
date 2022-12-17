@@ -192,6 +192,8 @@ async def evaluate_word(secret_word, guess_word):
 @app.route("/game/makeGuess", methods=["POST"])
 @validate_request(Guess)
 async def make_guess(data):
+    redis = get_redis_db()
+    q = Queue(connection=redis)  # no args implies the default queue
     # db = await _get_db()
     db_write = await _get_primary_db()
     db_read = await  _get_db('sec')
@@ -276,7 +278,8 @@ async def make_guess(data):
                 current_game = 6 - int(remaining[0])
                 data = {"game_id": game_id, "username": username, "win": 1, "num_guesses": str(current_game)}
                 webhooks = await db_read.fetch_all("SELECT * FROM webhook",)
-                deliver_msg(webhooks, data)
+                job = q.enqueue(deliver_msg, data, webhooks)
+                app.logger.info(f"enqueued info for guess to leaderboard service = {job}")
             return {
                 "Guess_valid": True,
                 "Guess_correct": correct ,
