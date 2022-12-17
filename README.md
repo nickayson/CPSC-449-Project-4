@@ -19,14 +19,19 @@ Section-01
 
 1) Copy the nginx.txt contents into the nginx config file on your system
 2) Restart the nginx file with the nginx restart command "sudo service nginx restart"
-3) Make var folder with "sh ./bin/start.sh"
+3) Make var folder with "sh ./bin/start.sh", rq_log folder will also be generated
 4) run "foreman start"
 5) Inside the directory run "sh ./bin/init.sh" to initiate db
 6) The servers should be running after this
-7) For testing the webhook:  
+7) To have rq enqueue run by cron every 10 mins:  
+   1. Run "sh ./bin/rq_cron.sh"
+   2. Copy the command that shows in terminal and paste in crontab
+   3. Log will be redirected to var/rq_log
+   4. If you do not like this way, you can simply add "*/10 * * * * bash -l [directory of rq_enqueue.sh] to crontab
+8) For testing the webhook:  
    1. Start the webhook service https://github.com/ProfAvery/cpsc449/tree/master/quart/webhooks by changing the PORT to 6000 in a separate terminal.
    2. In a different terminal, run: ngrok http 6000
-8) Open a new terminal and begin making API calls below
+9) Open a new terminal and begin making API calls below
 
 
 ## API calls using http:
