@@ -46,9 +46,9 @@ Section-01
 
 	Leaderboard top-scores:           http GET http://127.0.0.1:5400/top-scores/
 	
-	Add webhook:                      http POST tuffix-vm/add_webhook url=<url>
+	Add webhook:                      http --auth username:password POST tuffix-vm/add_webhook url=<url>
 	
-	List all webhooks:                http GET tuffix-vm/getWebhooks
+	List all webhooks:                http --auth username:password GET tuffix-vm/getWebhooks
 
 In top-scores we have dummy data with scores of 0 and will get removed as you add more users with higher scores
 
