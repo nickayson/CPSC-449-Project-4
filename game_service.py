@@ -82,7 +82,8 @@ async def close_connection(exception):
 def deliver_msg(webhooks, data):
     redis = get_redis_db()
     q = Queue(connection=redis)  # no args implies the default queue
-    data = q.enqueue(make_guess, 'http://tuffix-vm/add_webhook')
+    data = q.enqueue(make_guess)
+    app.logger.info(f"enqueued info for guess to leaderboard service = {data}")
     payload = {"text": str(data)}
     headers = {'Content-type': 'text/html'}
     for x in webhooks:
