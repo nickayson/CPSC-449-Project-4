@@ -312,7 +312,8 @@ async def make_guess(data):
         else:
             data = {"game_id": game_id, "username": username, "win": 0, "num_guesses": 6}
             webhooks = await db_read.fetch_all("SELECT * FROM webhook",)
-            deliver_msg(webhooks, data)
+            job = q.enqueue(deliver_msg, data, webhooks)
+            app.logger.info(f"enqueued info for guess to leaderboard service = {job}")
             return {"guessesLeft": 0}
 
     else:
