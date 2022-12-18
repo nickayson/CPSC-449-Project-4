@@ -74,12 +74,7 @@ async def score(data: LeaderboardInfo):
 	username = game_data["username"]
 	win = game_data["win"]
 	num_guesses = int(game_data["num_guesses"])
-
-	# Set data for a game
-	redisdb.hset(game_id, "win", int(win))
-	redisdb.hset(game_id, "username", username)
-	redisdb.hset(game_id, "num_guesses", num_guesses)
-
+	
 	try:
 		score = get_score(num_guesses, win)
 		games = 1
