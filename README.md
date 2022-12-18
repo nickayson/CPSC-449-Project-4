@@ -57,6 +57,7 @@ Section-01
 	List all webhooks:                http --auth username:password GET tuffix-vm/getWebhooks
 
 In top-scores we have dummy data with scores of 0 and will get removed as you add more users with higher scores
+In leaderboard ensure to Flush the redis database before running Leaderboard commands redis-cli> FLUSHDB
 
 
 
