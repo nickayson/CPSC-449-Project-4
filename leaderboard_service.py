@@ -74,6 +74,12 @@ async def score(data: LeaderboardInfo):
 	username = game_data["username"]
 	win = game_data["win"]
 	num_guesses = int(game_data["num_guesses"])
+
+	# Set data for a game
+	redisdb.hset(game_id, "win", int(win))
+	redisdb.hset(game_id, "username", username)
+	redisdb.hset(game_id, "num_guesses", num_guesses)
+
 	try:
 		score = get_score(num_guesses, win)
 		games = 1
@@ -88,6 +94,8 @@ async def score(data: LeaderboardInfo):
 			})
 		}
 		data_added = redisdb.mset(res)
+
+		redisdb.zadd("players", {username: score})
 			
 		if data_added:
 			leaderboard_info = {
@@ -113,18 +121,15 @@ async def score(data: LeaderboardInfo):
 # TOP 10 Scores
 @app.route("/top-scores/", methods=["GET"])
 async def topScores():
-	player_list = {}
-	redisdb = get_redis_db()
-	for key in redisdb.keys():
-		player_list[key.decode("UTF-8")] = ast.literal_eval((redisdb.get(key)).decode("UTF-8"))["score"]
-	sorted_player_list = dict(sorted(player_list.items(), key=lambda item: item[1], reverse=True))
-
-	res = {}
-	for k, val in enumerate(sorted_player_list):
-		res[int(k)+1] = val+" => "+str(sorted_player_list[val])
-	while len(res) > 10:
-		res.popitem()
-	return res, 200
+    r = get_redis_db()
+    arr = r.zrevrange("players", 0, -1, withscores=True)
+    top_players = {}
+    i = 0
+    while i < len(arr) and i < 10:
+        player = arr[i]
+        top_players[i+1] = player[0].decode("utf-8") + " - " + str(player[1])
+        i += 1
+    return top_players
 
 # Handle bad routes/errors 
 @app.errorhandler(404)
